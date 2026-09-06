@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Animal Matching Game with Timer & Sound</title>
+  <!-- โหลด A-Frame และ MindAR -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  
+  <style>
+    #ui-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      text-align: center;
+      font-family: sans-serif;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+    #start-btn {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #ffcc00;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ส่วนแสดงคะแนนและเวลา -->
+  <div id="ui-container">
+    <h3>เกมจับคู่สัตว์ AR (1 นาที)</h3>
+    <p id="timer-text">เวลา: 60 วินาที</p>
+    <p id="score-text">คะแนน: 0 / 5</p>
+  </div>
+
+  <!-- ปุ่มเริ่มเกม -->
+  <button id="start-btn" onclick="startGame()">เริ่มเกม!</button>
+
+  <!-- เสียงเอฟเฟกต์ (ใช้เสียงจาก Audio Context หรือลิงก์เสียงสั้นๆ) -->
+  <audio id="sound-correct" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="sound-win" src="https://actions.google.com/sounds/v1/cartoon/tada.ogg"></audio>
+  <audio id="sound-gameover" src="https://actions.google.com/sounds/v1/cartoon/funny_fail.ogg"></audio>
+
+  <!-- ระบบ AR Scene -->
+  <a-scene mindar-image="imageTargetSrc: targets.mind;" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights: true" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+    
+    <a-assets>
+      <img id="animal1" src="https://via.placeholder.com/150/FF0000/FFFFFF?text=Cat">
+      <img id="animal2" src="https://via.placeholder.com/150/00FF00/FFFFFF?text=Dog">
+      <img id="animal3" src="https://via.placeholder.com/150/0000FF/FFFFFF?text=Rabbit">
+      <img id="animal4" src="https://via.placeholder.com/150/FFFF00/FFFFFF?text=Bear">
+      <img id="animal5" src="https://via.placeholder.com/150/FF00FF/FFFFFF?text=Panda">
+    </a-assets>
+
+    <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="objects: .clickable"></a-camera>
+
+    <!-- เป้าหมายทั้ง 5 ชนิด -->
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane src="#animal1" position="0 0 0" height="1" width="1" class="clickable" onclick="checkMatch('Cat')"></a-plane>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex: 1">
+      <a-plane src="#animal2" position="0 0 0" height="1" width="1" class="clickable" onclick="checkMatch('Dog')"></a-plane>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex: 2">
+      <a-plane src="#animal3" position="0 0 0" height="1" width="1" class="clickable" onclick="checkMatch('Rabbit')"></a-plane>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex: 3">
+      <a-plane src="#animal4" position="0 0 0" height="1" width="1" class="clickable" onclick="checkMatch('Bear')"></a-plane>
+    </a-entity>
+    <a-entity mindar-image-target="targetIndex: 4">
+      <a-plane src="#animal5" position="0 0 0" height="1" width="1" class="clickable" onclick="checkMatch('Panda')"></a-plane>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    let score = 0;
+    const targetScore = 5;
+    let foundAnimals = [];
+    let timeLeft = 60;
+    let timerInterval = null;
+    let gameStarted = false;
+
+    function startGame() {
+      if (gameStarted) return;
+      gameStarted = true;
+      score = 0;
+      foundAnimals = [];
+      timeLeft = 60;
+      document.getElementById('score-text').innerText = `คะแนน: ${score} / ${targetScore}`;
+      document.getElementById('start-btn').style.display = 'none'; // ซ่อนปุ่มเริ่มเมื่อเกมเริ่ม
+
+      // เริ่มนับถอยหลัง
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer-text').innerText = `เวลา: ${timeLeft} วินาที`;
+
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          gameStarted = false;
+          document.getElementById('sound-gameover').play();
+          alert("หมดเวลา! เสียใจด้วย คุณทำภารกิจไม่สำเร็จ 😢");
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('start-btn').innerText = "เล่นใหม่อีกครั้ง";
+        }
+      }, 1000);
+    }
+
+    function checkMatch(animalName) {
+      if (!gameStarted) {
+        alert("กรุณากดปุ่ม 'เริ่มเกม!' ก่อนส่องภาพครับ");
+        return;
+      }
+
+      if (!foundAnimals.includes(animalName)) {
+        foundAnimals.push(animalName);
+        score++;
+        document.getElementById('score-text').innerText = `คะแนน: ${score} / ${targetScore}`;
+        
+        if (score === targetScore) {
+          clearInterval(timerInterval);
+          gameStarted = false;
+          document.getElementById('sound-win').play();
+          alert("ยินดีด้วย! คุณจับคู่สัตว์ครบทั้งหมดทันเวลา 🎉");
+          document.getElementById('start-btn').style.display = 'block';
+          document.getElementById('start-btn').innerText = "เล่นใหม่อีกครั้ง";
+        } else {
+          document.getElementById('sound-correct').play();
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
